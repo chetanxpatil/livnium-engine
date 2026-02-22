@@ -255,3 +255,12 @@ class AxionGridCore:
 
         if self._canonical_bytes() != snap:
             raise AssertionError("apply(op); apply(inverse) did not restore state")
+
+
+class LivniumEngineCore(AxionGridCore):
+    """Primary public name for the engine core.
+
+    `AxionGridCore` remains as a back-compat alias.
+    """
+
+    pass

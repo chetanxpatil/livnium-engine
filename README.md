@@ -26,9 +26,15 @@ python3 scripts/phase3_report.py
 Artifacts from the Phase-3 report are written under `artifacts/phase3/` by default.
 A small example output snapshot is tracked in `results/phase3_test_run/`.
 
+## Results snapshot (Phase-3)
+
+![Convergence mean±std](results/phase3_test_run/convergence_mean_std.png)
+
 ## Repository notes
 - Python package import name: `livnium_engine`
-- Core engine class is currently `AxionGridCore` (legacy name retained for continuity)
+- Primary core class: `LivniumEngineCore`
+- Back-compat alias: `AxionGridCore`
+- License: research-only (see `LICENSE`). Commercial use requires permission.
 
 ## Relation to Nova Memory
 Nova Memory applies related principles to auditable AI memory systems. Livnium Engine is the experimental substrate layer.
