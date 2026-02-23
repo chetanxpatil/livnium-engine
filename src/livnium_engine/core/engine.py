@@ -263,4 +263,30 @@ class LivniumEngineCore(AxionGridCore):
     `AxionGridCore` remains as a back-compat alias.
     """
 
-    pass
+    def perturb(self, steps: int, seed: int) -> None:
+        """Apply random *local* operations for `steps` iterations.
+
+        This is an energy-agnostic noise operator used for recovery / stability experiments.
+
+        Invariants:
+        - Uses only valid local rotations (op_id in [0..23])
+        - Calls audit() after each operation
+        """
+
+        if steps < 0:
+            raise ValueError("steps must be >= 0")
+
+        rng = random.Random(seed)
+        k = self.coords.k
+
+        for _ in range(steps):
+            op_id = rng.randrange(24)
+            radius = rng.choice([1, 2])
+            lo = -k + radius
+            hi = k - radius
+            cx = rng.randint(lo, hi)
+            cy = rng.randint(lo, hi)
+            cz = rng.randint(lo, hi)
+            center = (cx, cy, cz)
+            self.apply_local(op_id, center, radius)
+            self.audit()

@@ -43,6 +43,9 @@ def explore_anneal_local(
     temp_schedule: float | Sequence[float] | Callable[..., float],
     *,
     energy_fn: Callable[[AxionGridCore], float] | None = None,
+    init_grid: list[int] | None = None,
+    stop_hash: str | None = None,
+    return_hashes: bool = False,
 ) -> dict:
     """Simulated annealing over *local* moves.
 
@@ -67,7 +70,16 @@ def explore_anneal_local(
 
     rng = random.Random(init_seed)
     engine = AxionGridCore(N)
-    engine.randomize(init_seed)
+
+    if init_grid is not None:
+        if len(init_grid) != N**3:
+            raise ValueError("init_grid length mismatch")
+        engine.grid = list(init_grid)
+        engine.last_op_id = None
+        engine.last_action = None
+        engine.audit()
+    else:
+        engine.randomize(init_seed)
 
     first_seen_step: dict[str, int] = {}
     visit_counts: dict[str, int] = {}
@@ -75,6 +87,10 @@ def explore_anneal_local(
     h0 = engine.hash()
     first_seen_step[h0] = 0
     visit_counts[h0] = 1
+
+    hashes: list[str] | None = [h0] if return_hashes else None
+
+    stopped_step: int | None = 0 if (stop_hash is not None and h0 == stop_hash) else None
 
     E0 = float(energy_fn(engine))
     energies: list[float] = [E0]
@@ -88,6 +104,32 @@ def explore_anneal_local(
 
     accepted = 0
     proposed = 0
+
+    if stopped_step == 0:
+        return {
+            "N": N,
+            "steps": steps,
+            "steps_run": 0,
+            "init_seed": init_seed,
+            "accepted": accepted,
+            "proposed": proposed,
+            "acceptance_rate": 0.0,
+            "energies": energies,
+            "E0": E0,
+            "E_final": energies[-1],
+            "best_energy": best_E,
+            "best_step": best_step,
+            "last_improve_step": last_improve_step,
+            "last_change_step": 0,
+            "unique_state_count": len(first_seen_step),
+            "first_repeat_step": first_repeat_step,
+            "repeat_visits": repeats,
+            "final_hash": engine.hash(),
+            "final_grid": list(engine.grid),
+            "visit_counts": visit_counts,
+            "stopped_step": 0,
+            **({"hashes": hashes} if hashes is not None else {}),
+        }
 
     for step in range(1, steps + 1):
         proposed += 1
@@ -132,6 +174,9 @@ def explore_anneal_local(
             energies.append(E_prev)
 
         h = engine.hash()
+        if hashes is not None:
+            hashes.append(h)
+
         visit_counts[h] = visit_counts.get(h, 0) + 1
         if h in first_seen_step:
             repeats += 1
@@ -140,15 +185,22 @@ def explore_anneal_local(
         else:
             first_seen_step[h] = step
 
+        if stop_hash is not None and h == stop_hash:
+            stopped_step = step
+            break
+
     # crude convergence statistic: last time the energy changed
     last_change_step = 0
     for s in range(1, len(energies)):
         if energies[s] != energies[s - 1]:
             last_change_step = s
 
-    return {
+    steps_run = int(stopped_step) if stopped_step is not None else steps
+
+    out = {
         "N": N,
         "steps": steps,
+        "steps_run": steps_run,
         "init_seed": init_seed,
         "accepted": accepted,
         "proposed": proposed,
@@ -164,5 +216,12 @@ def explore_anneal_local(
         "first_repeat_step": first_repeat_step,
         "repeat_visits": repeats,
         "final_hash": engine.hash(),
+        "final_grid": list(engine.grid),
         "visit_counts": visit_counts,
+        "stopped_step": stopped_step,
     }
+
+    if hashes is not None:
+        out["hashes"] = hashes
+
+    return out
