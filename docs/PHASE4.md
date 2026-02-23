@@ -1,6 +1,10 @@
 # Phase 4 — Memory & Noise Recovery
 
-Goal: test whether Livnium Engine exhibits **basin “memory”**: after settling into a low-energy basin, does the system return to the *same* basin after being perturbed by unguided noise?
+Phase‑4 is trying to answer one clean scientific question:
+
+**Do Livnium Engine’s low‑energy basins behave like *memory* — i.e., error‑correcting attractors — under noise?**
+
+Goal (operational): after settling into a low‑energy basin, does the system return to the *same* basin after being perturbed by unguided noise?
 
 This phase adds:
 
@@ -14,9 +18,20 @@ This phase adds:
 ## Definitions
 
 - **Basin hash**: `engine.hash()` after annealing (a canonical sha256 hash of `(N, grid)`), used as a basin identifier.
-- **Recovery**: after perturbing and re-annealing, the run is considered recovered if the annealer re-hits the *same* basin hash (early-stop).
+
+- **Recovery (strict / hash recovery):** after perturbing and re‑annealing, the run is considered recovered if the annealer **re‑hits the exact same basin hash at any time during the re‑anneal window**.
+  - Implementation detail: the re‑anneal uses **early stopping** (`stop_hash`) and records `stopped_step`.
+
+- **Recovery window:** the re‑anneal runs for at most `anneal_steps` steps. If the original basin hash is not re‑hit within this window, the trial is marked non‑recovered.
+
 - **Noise magnitude**: `perturb_steps = k` (number of random local moves).
+
 - **Recovery probability**: fraction of trials that recover the same basin.
+
+- **Recovery time:** number of anneal steps until the original basin hash is re‑hit (conditioned on recovery).
+
+- **Energy overshoot:** the maximum energy reached during the re‑anneal minus the basin energy.
+
 - **Stability radius (operational)**: the largest `k` such that `P(recover) >= threshold` (default threshold = 0.5).
 
 ## Annealing + energy
@@ -47,10 +62,10 @@ Optional:
 python scripts/phase4_report.py --N 5 --trials 25 --init-seed 0
 ```
 
-- change perturb grid:
+- change perturb grid (include `0` as a determinism / solver-stability control):
 
 ```bash
-python scripts/phase4_report.py --perturb 1 5 10 20 50 100
+python scripts/phase4_report.py --perturb 0 1 2 5 10 20 50 100
 ```
 
 Outputs land in:

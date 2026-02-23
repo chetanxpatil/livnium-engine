@@ -44,12 +44,29 @@ def exp_cooling(T0: float, Tmin: float, steps: int):
     return schedule
 
 
+def _set_xscale_for_perturb(xs: list[int]) -> str:
+    """Choose a readable x-scale.
+
+    If 0 is present (control point), log-scale is invalid; use symlog.
+    """
+
+    return "symlog" if xs and min(xs) <= 0 else "log"
+
+
 def plot_recovery_curve(xs: list[int], ys: list[float], outpath: Path) -> None:
     plt.figure(figsize=(6.5, 4.2))
     plt.plot(xs, ys, marker="o")
-    plt.xscale("log")
+
+    xscale = _set_xscale_for_perturb(xs)
+    if xscale == "symlog":
+        plt.xscale("symlog", linthresh=1)
+        xlabel = "perturb steps (symlog; includes 0 control)"
+    else:
+        plt.xscale("log")
+        xlabel = "perturb steps (log scale)"
+
     plt.ylim(-0.02, 1.02)
-    plt.xlabel("perturb steps (log scale)")
+    plt.xlabel(xlabel)
     plt.ylabel("recovery probability")
     plt.title("Basin recovery vs noise magnitude")
     plt.grid(True, alpha=0.3)
@@ -70,9 +87,17 @@ def plot_stability_radius(xs: list[int], ys: list[float], threshold: float, outp
     plt.axhline(threshold, linestyle="--", color="gray", label=f"threshold={threshold:.2f}")
     if radius is not None:
         plt.axvline(radius, linestyle=":", color="black", label=f"radius={radius}")
-    plt.xscale("log")
+
+    xscale = _set_xscale_for_perturb(xs)
+    if xscale == "symlog":
+        plt.xscale("symlog", linthresh=1)
+        xlabel = "perturb steps (symlog; includes 0 control)"
+    else:
+        plt.xscale("log")
+        xlabel = "perturb steps (log scale)"
+
     plt.ylim(-0.02, 1.02)
-    plt.xlabel("perturb steps (log scale)")
+    plt.xlabel(xlabel)
     plt.ylabel("recovery probability")
     plt.title("Stability radius")
     plt.legend()
@@ -156,8 +181,8 @@ def main() -> int:
         "--perturb",
         type=int,
         nargs="+",
-        default=[1, 5, 10, 20, 50, 100],
-        help="perturb steps to evaluate",
+        default=[0, 1, 2, 5, 10, 20, 50, 100],
+        help="perturb steps to evaluate (include 0 as a determinism control)",
     )
     ap.add_argument("--threshold", type=float, default=0.5)
     ap.add_argument("--outdir", type=Path, default=Path("artifacts/phase4"))
